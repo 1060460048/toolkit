@@ -10,7 +10,7 @@ namespace vercmp
 {
 
 template < typename Type >
-void strsplit(const Type & s, const Type & delim,std::vector< Type > & ret)
+inline void strsplit(const Type & s, const Type & delim,std::vector< Type > & ret)
 {
     size_t last = 0;
     size_t index=s.find_first_of(delim,last);
@@ -27,7 +27,7 @@ void strsplit(const Type & s, const Type & delim,std::vector< Type > & ret)
 }
 
 typedef std::string T;
-T strtrim(T & str,T delim, T::size_type pos = 0)
+inline T strtrim(T & str,T delim, T::size_type pos = 0)
 {
     pos = str.find_first_of(delim, pos);
     if (pos == T::npos)
