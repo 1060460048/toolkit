@@ -2,8 +2,12 @@
 #define _HEADER_FILE_VERSION_COMPARE_HPP_
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string>
 #include <vector>
+
+namespace vercmp
+{
 
 template < typename Type >
 void strsplit(const Type & s, const Type & delim,std::vector< Type > & ret)
@@ -20,6 +24,15 @@ void strsplit(const Type & s, const Type & delim,std::vector< Type > & ret)
     {
         ret.push_back(s.substr(last,index-last));
     }
+}
+
+typedef std::string T;
+T strtrim(T & str,T delim, T::size_type pos = 0)
+{
+    pos = str.find_first_of(delim, pos);
+    if (pos == T::npos)
+        return str;
+    return strtrim(str.erase(pos, delim.size()),delim);
 }
 
 class VersionCompare
@@ -40,15 +53,35 @@ public:
     // setString is like of "(1.0.1.1, 2.0.0.1]", return 1 ok, <0 failed.
     static int ParseSet(const T & setString, VersionCompare::VersionSet & setParseResult)
     {
+        T ss =setString;
+        ss =strtrim(ss," ");
+        
         std::vector < std::string > ele;
         std::string delim=",";
-        strsplit(setString, delim, ele);
+        strsplit(ss, delim, ele);
+        
+        
         if(ele.size()<2)
             return -1;
         if(ele[0].size()<2)
-            return -2;
+        {
+            if(ele[1].size()<2)
+                return -2;
+            else  // (,2.0.0.1]
+            {
+                ele[0] +="0";
+            }
+        }
         if(ele[1].size()<2)
-            return -3;
+        {
+            if(ele[0].size()<2)
+                return -3;
+            else // (1.0.1.1,]
+            {
+                ele[1] ="2100000000"+ele[1];
+            }
+        }
+        
         
         if(ele[0][0]=='(')
             setParseResult.includeLeft =0;
@@ -138,6 +171,8 @@ private:
         }
     }
 };
+
+} // namespace vercmp
 
 #endif // _HEADER_FILE_VERSION_COMPARE_HPP_
 
