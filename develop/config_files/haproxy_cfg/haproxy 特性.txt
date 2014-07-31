@@ -1,0 +1,26 @@
+
+关于新内部版麦通的部署环境问题
+
+
+姚志兵说现在的网络环境部署LVS-DR模型有困难，建议我们使用haproxy(亦或lvs-nat?)
+我之前没有使用过haproxy，短暂研究了一下，了解到其有如下的特性，基本测试模型是 客户端(前端)->haproxy->后端(目前的router):
+
+1) 建立连接后，后端得到的ip是haproxy机器所在的ip，不是客户端的真实ip。需要部署TPROXY方可实现。我是参考这几遍文章的，
+http://blog.loadbalancer.org/configure-haproxy-with-tproxy-kernel-for-full-transparent-proxy/
+http://kb.snapt-ui.com/wp-content/uploads/2012/03/Snapt-HAProxy-TPROXY.pdf
+http://blog.sina.com.cn/s/blog_704836f401011e17.html
+
+我在外网使用三台机器做测试，分别是192.168.17.151(back server0,back server0,),192.168.17.153(haproxy),192.168.28.131(client).
+并在192.168.17.153机器上配置了文章中说明的防火墙及路由转发配置。
+但是测试没有成功。如文章中所述加上"source 0.0.0.0 usesrc clientip"，back server无法收到报文。暂时未找到原因。 
+
+
+2) 客户端与haproxy的连接和haproxy与后端的连接一一对应。一千个客户端连到haproxy，就有一千个到后端的连接。
+
+
+3) 客户端(或后端)与haproxy建立连接、断开连接的行为会透明反映到后端(客户端)。意思是，后端断开与haproxy连接时,haproxy也会断开与客户端的连接。
+
+
+我对防火墙规则不太了解，文章中所述的防火墙规则是否满足公司的网络环境，请查查看。
+TPROXY这种方法真心麻烦，请大家想想办法，看看有没有其它方法。
+谢谢！
