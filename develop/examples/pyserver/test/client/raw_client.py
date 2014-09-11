@@ -1,19 +1,9 @@
-
-"""
-[pro@WSCENTOS64_x64 20:35:27 gevent_test]$time python raw_client.py
-time= 1410439094.08
-time= 1410439104.24
-
-real    0m10.200s
-user    0m1.045s
-sys     0m5.536s
-
-
-
-"""
+#!/bin/env python
+# -*- coding: utf-8 -*-
 
 import socket
 import struct
+import json
 import time
 
 HEAD_LEN=4
@@ -23,22 +13,24 @@ sock.connect(('192.168.1.70',18600))
 
 print 'time=',time.time()
 
-data ='hello,world!'
+u = u'汉'
+s = u.encode('UTF-8')
+
+data =json.dumps({'cmd':'login','user':s,'pwd':'12345'})
 data =struct.pack('!i',len(data))+data
 
-total =100000
+total =1
 
 n =0
 while n<total:
     n +=1
     sock.sendall(data)
-#    print 'sent,n=%d,data=%s'%(n,data[4:])
+    print 'sent: n=%d,data=%s'%(n,data[4:])
 
     header =sock.recv(HEAD_LEN)
     bodyLen =struct.unpack('!i',header)[0]
     body =sock.recv(bodyLen)
-#    print body
-
+    print 'recved:',json.loads(body)
 
 print 'time=',time.time()
 sock.close()

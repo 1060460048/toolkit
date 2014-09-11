@@ -1,4 +1,5 @@
 #!/bin/env python
+# -*- coding: utf-8 -*-
     
 import gevent
 from gevent.server import StreamServer
@@ -6,33 +7,37 @@ from gevent.pool import Pool
 from gevent.queue import Queue
 from gevent import monkey
 monkey.patch_socket()
+
 import struct
 import time
+import sys
+import json
 
-def recvall(sock,totalLen):
-    data =''
-    left =totalLen
-    while left>0:
-        d =sock.recv(left)
-        if not d:
-            data =None
-            break
-        data +=d
-        left =totalLen-len(data)
-    return data
+from pys_common import *
+sys.path.append('./service')
 
-def TaskWorker(taskQueue):
+def TaskWorker(taskQueue,id):
     while True:
         task = taskQueue.get()
-#        print'Worker got task ' ,task
+        print'Worker %d got task %r ' % (id,task)
         if task.has_key('stop'):
             break
 
         if task.has_key('sock') and task.has_key('req'):
-            rsp ='Server response->'+task['req']
-            rspPacket =struct.pack('!i',len(rsp))+rsp
-            task['sock'].sendall(rspPacket)
-#            print 'sent',rsp
+            req =json.loads(task['req'])
+            modname =PYS_SERVICE_MOD_PRE+req['cmd']
+            
+            if not sys.modules.has_key(modname):
+                __import__(modname)
+            mod =sys.modules[modname]
+            
+            rsp =mod.Entry(req)
+            if rsp:
+                rspPacket =struct.pack('!i',len(rsp))+rsp
+                task['sock'].sendall(rspPacket)
+                print 'sent,size=%d,%s'%(len(rsp),rsp)
+            else : # no rsp to send.
+                break
         else :
             print 'error of task:,',task
             
@@ -42,10 +47,8 @@ def handler(sock, address):
     print('New connection from %s:%s' % address)
 
     taskQueue =Queue()
-    taskWorker =gevent.spawn(TaskWorker,taskQueue)
+    taskWorker =gevent.spawn(TaskWorker,taskQueue,sock.fileno())
     
-    HEAD_LEN=4
-    MAX_BODY_LEN=10240
     while True:
         header = recvall(sock,HEAD_LEN)
         if not header:
@@ -56,13 +59,14 @@ def handler(sock, address):
             break;
         elif bodyLen > 0 :
             req = recvall(sock,bodyLen)
-#            print 'recved:',req
+            print 'recved:size=%d,%s'%(len(req),req)
             if not header:  # error.
                 break
             
             taskQueue.put({'sock':sock,'req':req})
     taskQueue.put({'stop':''})
     sock.close()
+    gevent.joinall([taskWorker])
     
 if __name__ == '__main__':
     server = StreamServer(('0.0.0.0', 18600), handler, backlog=512, spawn=Pool(5000))
