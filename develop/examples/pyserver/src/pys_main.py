@@ -26,12 +26,10 @@ def TaskWorker(taskQueue,id):
         if task.has_key('sock') and task.has_key('req'):
             req =json.loads(task['req'])
             modname =PYS_SERVICE_MOD_PRE+req['cmd']
-            
             if not sys.modules.has_key(modname):
                 __import__(modname)
-            mod =sys.modules[modname]
             
-            rsp =mod.Entry(req)
+            rsp =sys.modules[modname].Entry(req)
             if rsp:
                 rspPacket =struct.pack('!i',len(rsp))+rsp
                 task['sock'].sendall(rspPacket)
