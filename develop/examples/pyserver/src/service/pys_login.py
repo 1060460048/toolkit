@@ -3,8 +3,13 @@
     
 import json
 import sys
+import time
 sys.path.append('../')
 from pys_common import *
+    
+
+def tic(s, start):
+    print '%s, %1.6f '%(s,(time.time() - start)*1000)
     
 def db_checkuser(db,user): 
     cursor = db.cursor() 
@@ -17,19 +22,18 @@ def db_checkuser(db,user):
     if cursor.rowcount >0:
         rt =True
     return rt
-
+    
 def Entry(req):
 #    return json.dumps({'cmd':'_loginrsp','rt':'1','desc':req['user']+' login succ.'})
-    
+
     rsp =None
-    db =pys_dbpool.Get()    
+    db =pys_dbpool.Get()  
     try:
         rt ='0'
         desc =req['user']+' login failed.'
         if db_checkuser(db,req['user']):
             rt ='1'
             desc =req['user']+' login ok.'
-    
         rsp =json.dumps({'cmd':'_loginrsp','rt':rt,'desc':desc})  
     except Exception,e:
         print e
