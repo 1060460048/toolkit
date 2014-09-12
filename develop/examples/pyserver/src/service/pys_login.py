@@ -9,22 +9,23 @@ from pys_common import *
     
 
 def tic(s, start):
-    print '%s, %1.6f '%(s,(time.time() - start)*1000)
+    print '%s %1.6f ms'%(s,(time.time() - start)*1000)
     
 def db_checkuser(db,user): 
     cursor = db.cursor() 
     sql ="select * from t where name='%s'"%(user)
+#    sql ="update t set name='zhangsan-py' where id=1"  # 测试协程被阻塞的情况.
     data = cursor.execute(sql) 
     cursor.close()     
-#    for e in cursor:
-#        print e 
-    rt =False
-    if cursor.rowcount >0:
-        rt =True
+    rt =True   # 测试协程被阻塞的情况.
+#    rt =False
+#    if cursor.rowcount >0:
+#        rt =True
+
     return rt
     
 def Entry(req):
-#    return json.dumps({'cmd':'_loginrsp','rt':'1','desc':req['user']+' login succ.'})
+#    return json.dumps({'cmd':'_loginrsp','rt':'1','desc':req['user']+' login succ.'})  # 测试不查数据库，直接返回报文.
 
     rsp =None
     db =pys_dbpool.Get()  
@@ -36,9 +37,8 @@ def Entry(req):
             desc =req['user']+' login ok.'
         rsp =json.dumps({'cmd':'_loginrsp','rt':rt,'desc':desc})  
     except Exception,e:
+        pys_dbpool.Release(db,False)
         print e
-        db.rollback()
     else :
-        db.commit()
-    pys_dbpool.Release(db)
+        pys_dbpool.Release(db,True)
     return rsp

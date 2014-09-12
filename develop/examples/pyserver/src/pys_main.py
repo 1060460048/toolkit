@@ -8,13 +8,24 @@ from gevent.queue import Queue
 from gevent import monkey
 monkey.patch_socket()
 
-import struct
-import time
+from pys_common import *
 import sys
+sys.path.append('./service')
+
+import time
 import json
 
-from pys_common import *
-sys.path.append('./service')
+def DoTask(task):
+    if task.has_key('sock') and task.has_key('req'):
+        req =json.loads(task['req'])
+        rsp =CallModule(req['cmd'],req)
+        if rsp:
+            task['sock'].sendall(PackData(rsp))
+#                print 'sent,size=%d,%s'%(len(rsp),rsp)
+        else : # no rsp to send.
+            pass
+    else :
+        print 'error of task:,',task
 
 def TaskWorker(taskQueue,id):
     while True:
@@ -22,36 +33,20 @@ def TaskWorker(taskQueue,id):
 #        print'Worker %d got task %r ' % (id,task)
         if task.has_key('stop'):
             break
-
-        if task.has_key('sock') and task.has_key('req'):
-            req =json.loads(task['req'])
-            modname =PYS_SERVICE_MOD_PRE+req['cmd']
-            if not sys.modules.has_key(modname):
-                __import__(modname)
-            
-            rsp =sys.modules[modname].Entry(req)
-            if rsp:
-                rspPacket =struct.pack('!i',len(rsp))+rsp
-                task['sock'].sendall(rspPacket)
-#                print 'sent,size=%d,%s'%(len(rsp),rsp)
-            else : # no rsp to send.
-                pass
-        else :
-            print 'error of task:,',task
-            
+        DoTask(task)            
         gevent.sleep(0)
 
 def handler(sock, address):
     print('New connection from %s:%s' % address)
 
     taskQueue =Queue()
-    taskWorker =gevent.spawn(TaskWorker,taskQueue,sock.fileno())
+    taskWorker =gevent.spawn(TaskWorker,taskQueue,sock.fileno()) # 处理协程用于从任务队列中取出任务并处理.
     
     while True:
         header = recvall(sock,HEAD_LEN)
         if not header:
             break
-        bodyLen =struct.unpack('!i',header)[0]
+        bodyLen =UnpackData(header)
         if bodyLen > MAX_BODY_LEN :
             print 'bodyLen=',bodyLen
             break;
@@ -61,7 +56,10 @@ def handler(sock, address):
             if not header:  # error.
                 break
             
-            taskQueue.put({'sock':sock,'req':req})
+            task ={'sock':sock,'req':req}
+#            DoTask(task)   # 测试接收和处理在同一协程中
+            taskQueue.put(task)
+#            print'Put task to worker %d , taskQueue.qsize=%d' % ( sock.fileno(), taskQueue.qsize())
     taskQueue.put({'stop':''})
     sock.close()
     gevent.joinall([taskWorker])
