@@ -19,7 +19,7 @@ sys.path.append('./service')
 def TaskWorker(taskQueue,id):
     while True:
         task = taskQueue.get()
-        print'Worker %d got task %r ' % (id,task)
+#        print'Worker %d got task %r ' % (id,task)
         if task.has_key('stop'):
             break
 
@@ -33,9 +33,9 @@ def TaskWorker(taskQueue,id):
             if rsp:
                 rspPacket =struct.pack('!i',len(rsp))+rsp
                 task['sock'].sendall(rspPacket)
-                print 'sent,size=%d,%s'%(len(rsp),rsp)
+#                print 'sent,size=%d,%s'%(len(rsp),rsp)
             else : # no rsp to send.
-                break
+                pass
         else :
             print 'error of task:,',task
             
@@ -57,7 +57,7 @@ def handler(sock, address):
             break;
         elif bodyLen > 0 :
             req = recvall(sock,bodyLen)
-            print 'recved:size=%d,%s'%(len(req),req)
+#            print 'recved:size=%d,%s'%(len(req),req)
             if not header:  # error.
                 break
             
@@ -68,5 +68,6 @@ def handler(sock, address):
     
 if __name__ == '__main__':
     server = StreamServer(('0.0.0.0', 18600), handler, backlog=512, spawn=Pool(5000))
+    print 'main starting'
     server.serve_forever()
 

@@ -1,6 +1,13 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 
+import pymysql
+from gevent import monkey
+monkey.patch_socket() 
+from gevent.queue import Queue
+import gevent
+
+
 PYS_SERVICE_MOD_PRE='pys_'  # 模块名称的前缀
 HEAD_LEN=4
 MAX_BODY_LEN=40960
@@ -18,37 +25,21 @@ def recvall(sock,totalLen):
     return data
 
 
-import pymysql
-from gevent import monkey
-monkey.patch_socket() 
-from gevent.queue import Queue
-
 class SimpleDBPool():
-    HOST='localhost'
-    PASSWD='pwd'
+    HOSTS='192.168.17.153'
+    PASSWD='tm'
     USER='root'
     DB='test'
     def __init__(self):
         self._dbFree =Queue()
-        for conn in [pymysql.connect(host=HOST,passwd=PASSWD,user=USER,db=DB) for i in xrange(0,10)] :
+        for conn in [pymysql.connect(host=self.HOSTS,passwd=self.PASSWD,user=self.USER,db=self.DB) for i in xrange(0,10)] :
             self._dbFree.put(conn)
-        print dbFreeQueue
         
-    def Get():
-        conn =self.dbFreeQueue.get()
+    def Get(self):
+        conn =self._dbFree.get()
         return conn
-    def Release(conn):
-        dbFreeQueue.put(conn)
-        gevent.sleep(0)
-        
-// TODO:
-def dbQuery1(sql,db): 
-    print '---- dbQuery1 start ----'
-    cursor = db.cursor() 
-    data = cursor.execute(sql) 
-    cursor.close() 
-    db.commit()
-    for e in cursor:
-        print e 
-    print '---- dbQuery1 over ----'
-        
+    def Release(self,conn):
+        self._dbFree.put(conn)
+        gevent.sleep(0)        
+pys_dbpool =SimpleDBPool()
+
